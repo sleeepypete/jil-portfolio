@@ -58,6 +58,34 @@ function requestOrigin(req) {
   return host ? `${protocol}://${host}` : '';
 }
 
+function emailConfig() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const configuredFrom = process.env.CHAT_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || '';
+  const from = configuredFrom || 'Jil Portfolio <onboarding@resend.dev>';
+  const replyTo = process.env.CHAT_REPLY_TO_EMAIL || process.env.RESEND_REPLY_TO_EMAIL || process.env.REPLY_TO_EMAIL || configuredFrom;
+
+  if (!apiKey) {
+    return { error: 'Email notices need RESEND_API_KEY in Vercel.' };
+  }
+
+  return {
+    apiKey,
+    from,
+    replyTo,
+    usingDefaultFrom: !configuredFrom
+  };
+}
+
+function parseEmailError(text) {
+  if (!text) return '';
+  try {
+    const parsed = JSON.parse(text);
+    return parsed.message || parsed.error || text;
+  } catch (error) {
+    return text;
+  }
+}
+
 function emailHtml(text, siteUrl) {
   const escapedText = text
     .replace(/&/g, '&amp;')
@@ -178,39 +206,47 @@ function visitorTokenMatches(thread, providedToken) {
 async function sendReplyEmail(thread, replyText, req) {
   if (!thread.email) return { sent: false, reason: 'no-email' };
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return { sent: false, reason: 'not-configured' };
+  const config = emailConfig();
+  if (config.error) return { sent: false, reason: 'not-configured', message: config.error };
 
   const siteUrl = process.env.CHAT_SITE_URL || requestOrigin(req);
-  const from = process.env.CHAT_FROM_EMAIL || 'Jil Portfolio <onboarding@resend.dev>';
+  const emailPayload = {
+    from: config.from,
+    to: thread.email,
+    subject: 'Jil replied to your portfolio chat',
+    text: `Jil replied to your portfolio chat:\n\n${replyText}\n\nOpen the portfolio chat from the same browser where you started it: ${siteUrl}`,
+    html: emailHtml(replyText, siteUrl)
+  };
+
+  if (config.replyTo) {
+    emailPayload.reply_to = config.replyTo;
+  }
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
         'User-Agent': 'jil-portfolio-chat/1.0'
       },
-      body: JSON.stringify({
-        from,
-        to: thread.email,
-        subject: 'Jil replied to your portfolio chat',
-        text: `Jil replied to your portfolio chat:\n\n${replyText}\n\nOpen the portfolio chat from the same browser where you started it: ${siteUrl}`,
-        html: emailHtml(replyText, siteUrl)
-      })
+      body: JSON.stringify(emailPayload)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      let message = parseEmailError(errorText);
+      if (config.usingDefaultFrom) {
+        message = `${message || 'Email request failed'} Set CHAT_FROM_EMAIL or RESEND_FROM_EMAIL to a verified Resend sender in Vercel.`;
+      }
       console.error('Reply email failed:', response.status, errorText);
-      return { sent: false, reason: 'failed' };
+      return { sent: false, reason: 'failed', status: response.status, message };
     }
 
     return { sent: true };
   } catch (error) {
     console.error('Reply email failed:', error);
-    return { sent: false, reason: 'failed' };
+    return { sent: false, reason: 'failed', message: error.message || 'Email request failed' };
   }
 }
 

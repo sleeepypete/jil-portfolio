@@ -79,7 +79,7 @@ body {
 
 /* ── NAV ────────────────────────────────────── */
 nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 3rem;
   background: var(--nav-bg);
@@ -101,6 +101,8 @@ nav {
 .nav-links a:hover { color: var(--accent); }
 .nav-actions {
   display: flex; align-items: center; gap: 1rem;
+  position: relative;
+  z-index: 201;
 }
 .theme-toggle {
   width: 2.35rem; height: 2.35rem;
@@ -142,7 +144,7 @@ nav {
 .mobile-menu {
   display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: var(--mobile-menu-bg); backdrop-filter: blur(20px);
-  z-index: 99; flex-direction: column;
+  z-index: 190; flex-direction: column;
   align-items: center; justify-content: center; gap: 2.5rem;
 }
 .mobile-menu.open { display: flex; }
@@ -530,20 +532,6 @@ footer p {
   font-family: 'DM Mono', monospace;
   font-size: 0.68rem; color: var(--dim); letter-spacing: 0.06em;
 }
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: transform 0.08s ease-out;
-  z-index: 9999;
-}
-
 /* CHAT */
 .chat-widget {
   position: fixed;
@@ -554,7 +542,9 @@ footer p {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.8rem;
+  pointer-events: none;
 }
+.chat-widget.open { pointer-events: auto; }
 .chat-panel {
   width: min(400px, calc(100vw - 3rem));
   height: min(660px, calc(100vh - 6rem));
@@ -564,7 +554,7 @@ footer p {
   border-radius: 6px;
   box-shadow: 0 24px 70px rgba(0,0,0,0.28);
   overflow: hidden;
-  display: flex;
+  display: none;
   flex-direction: column;
   transform: translateY(12px);
   opacity: 0;
@@ -573,6 +563,7 @@ footer p {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .chat-widget.open .chat-panel {
+  display: flex;
   transform: translateY(0);
   opacity: 1;
   visibility: visible;
@@ -862,6 +853,7 @@ footer p {
   white-space: nowrap;
 }
 .chat-toggle {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
@@ -947,7 +939,6 @@ footer p {
 </style>
 </head>
 <body>
-  <div class="cursor-dot"></div>
 
 <!-- NAV -->
 <nav>
@@ -968,7 +959,7 @@ footer p {
         <path d="M12 3a6.8 6.8 0 0 0 8.9 8.9A8.5 8.5 0 1 1 12 3z"></path>
       </svg>
     </button>
-    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+    <button class="nav-hamburger" id="hamburger" type="button" aria-label="Menu" aria-controls="mobileMenu" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -1798,9 +1789,11 @@ if (ownerReplyForm) {
       const status = notice.sent
         ? 'Reply sent and email notice delivered.'
         : notice.reason === 'not-configured'
-          ? 'Reply sent. Email notices need RESEND_API_KEY in Vercel.'
-          : 'Reply sent in the chat.';
-      setChatStatus(ownerChatStatus, status, 'success');
+          ? 'Reply sent. ' + (notice.message || 'Email notices need RESEND_API_KEY in Vercel.')
+          : notice.reason === 'no-email'
+            ? 'Reply sent. This visitor did not leave an email.'
+            : 'Reply sent, but email notice failed' + (notice.message ? ': ' + notice.message : '.');
+      setChatStatus(ownerChatStatus, status, notice.sent || notice.reason === 'no-email' ? 'success' : 'error');
       await loadOwnerThreads(true);
     } catch (error) {
       setChatStatus(ownerChatStatus, error.message, 'error');
@@ -1825,23 +1818,23 @@ window.setInterval(() => {
 function swapImg(id, src) {
   document.getElementById(id).src = src;
 }
-const cursor = document.querySelector('.cursor-dot');
-
-window.addEventListener('mousemove', (e) => {
-  cursor.style.top = e.clientY + 'px';
-  cursor.style.left = e.clientX + 'px';
-});
 // Hamburger menu
 const hamburger = document.getElementById('hamburger');
 const mobileMenu = document.getElementById('mobileMenu');
-hamburger.addEventListener('click', () => {
-  hamburger.classList.toggle('open');
-  mobileMenu.classList.toggle('open');
-});
+if (hamburger && mobileMenu) {
+  hamburger.addEventListener('click', () => {
+    const isOpen = hamburger.classList.toggle('open');
+    mobileMenu.classList.toggle('open', isOpen);
+    hamburger.setAttribute('aria-expanded', String(isOpen));
+  });
+}
 document.querySelectorAll('.mobile-link').forEach(a => {
   a.addEventListener('click', () => {
-    hamburger.classList.remove('open');
-    mobileMenu.classList.remove('open');
+    if (hamburger) {
+      hamburger.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+    }
+    if (mobileMenu) mobileMenu.classList.remove('open');
   });
 });
 
