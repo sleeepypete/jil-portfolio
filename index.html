@@ -1509,15 +1509,36 @@ function renderMessages(container, messages, emptyText) {
   container.scrollTop = container.scrollHeight;
 }
 
+async function readChatResponse(response, fallbackMessage) {
+  const text = await response.text();
+  let result = null;
+
+  if (text) {
+    try {
+      result = JSON.parse(text);
+    } catch (error) {
+      result = { error: text.slice(0, 180) };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error((result && result.error) || fallbackMessage || 'Chat request failed');
+  }
+
+  if (!result) {
+    throw new Error(fallbackMessage || 'Chat returned an empty response');
+  }
+
+  return result;
+}
+
 async function requestChat(payload) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Chat request failed');
-  return result;
+  return readChatResponse(response, 'Chat request failed');
 }
 
 async function loadVisitorThread(silent = false, markSeen = false) {
@@ -1537,8 +1558,7 @@ async function loadVisitorThread(silent = false, markSeen = false) {
     const visitorToken = getStoredValue(CHAT_VISITOR_TOKEN_KEY);
     const params = new URLSearchParams({ threadId: visitorThreadId, visitorToken });
     const response = await fetch(`/api/chat?${params.toString()}`);
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Conversation unavailable');
+    const result = await readChatResponse(response, 'Conversation unavailable');
     renderMessages(visitorMessages, result.thread.messages, 'No messages yet.');
     updateVisitorUnread(result.thread.messages, markSeen || chatWidget.classList.contains('open'));
     if (result.visitorToken) setStoredValue(CHAT_VISITOR_TOKEN_KEY, result.visitorToken);
