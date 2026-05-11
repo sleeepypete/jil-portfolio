@@ -87,9 +87,17 @@ nav {
   border-bottom: 1px solid var(--border);
 }
 .nav-name {
+  display: inline-flex;
   font-family: 'Fraunces', serif;
   font-size: 1rem; font-weight: 400;
   color: var(--text); letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-name:hover { color: var(--accent); }
+.nav-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 .nav-links { display: flex; gap: 2.5rem; list-style: none; }
 .nav-links a {
@@ -942,7 +950,7 @@ footer p {
 
 <!-- NAV -->
 <nav>
-  <span class="nav-name">Jil Dominic Pojarda</span>
+  <a class="nav-name" href="#home" aria-label="Go to profile photo section">Jil Dominic Pojarda</a>
   <ul class="nav-links">
     <li><a href="#about">About</a></li>
     <li><a href="#projects">Projects</a></li>
@@ -976,7 +984,7 @@ footer p {
 
 <!-- HERO -->
 <div style="max-width:900px;margin:0 auto;">
-<section class="hero">
+<section class="hero" id="home">
   <figure class="hero-photo" aria-label="Portrait of Jil Dominic Pojarda">
     <div class="hero-photo-fallback" aria-hidden="true">JP</div>
     <img src="profile-photo.jpg" alt="Portrait of Jil Dominic Pojarda" loading="eager" onerror="this.classList.add('is-hidden');"/>
