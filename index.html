@@ -252,6 +252,12 @@ nav {
   margin-bottom: 2.5rem;
   opacity: 0; animation: fadeUp 0.7s 0.4s ease forwards;
 }
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.2rem;
+}
 .hero-cta {
   display: inline-flex; align-items: center; gap: 0.6rem;
   font-family: 'DM Mono', monospace;
@@ -263,6 +269,10 @@ nav {
   opacity: 0; animation: fadeUp 0.7s 0.5s ease forwards;
 }
 .hero-cta:hover { color: var(--text); border-color: var(--text); }
+.hero-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 .hero-scroll {
   position: absolute; bottom: 2.5rem; left: 3rem;
   display: flex; align-items: center; gap: 0.8rem;
@@ -992,7 +1002,10 @@ footer p {
   <div class="hero-copy">
     <h1 class="hero-name">Jil Dominic<br/><em>Pojarda</em></h1>
     <p class="hero-subtitle">BS Computer Science · Ateneo de Naga University · Designer · Developer</p>
-    <a href="#projects" class="hero-cta">View my work ↓</a>
+    <div class="hero-actions">
+      <a href="#projects" class="hero-cta">View my work</a>
+      <a href="jil-dominic-pojarda-resume.pdf" class="hero-cta" download="jil-dominic-pojarda-resume.pdf">Download resume</a>
+    </div>
   </div>
   <div class="hero-scroll">scroll</div>
 </section>
@@ -1298,6 +1311,7 @@ footer p {
   <div class="contact-inner">
     <div class="contact-links">
       <button class="c-link primary" id="contactChatOpen" type="button">Open chat</button>
+      <a href="jil-dominic-pojarda-resume.pdf" class="c-link primary" download="jil-dominic-pojarda-resume.pdf">Resume</a>
       <a href="https://github.com/sleeepypete" target="_blank" class="c-link">GitHub ↗</a>
       <a href="https://www.linkedin.com/in/jil-dominic-pojarda-aa1a2b2a5/" target="_blank" class="c-link">LinkedIn ↗</a>
     </div>
