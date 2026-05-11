@@ -512,6 +512,7 @@ nav {
   font-family: 'DM Mono', monospace;
   font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
   text-decoration: none; padding: 0.6rem 1.3rem;
+  background: transparent; cursor: pointer;
   border: 1px solid var(--border); color: var(--muted);
   border-radius: 3px; transition: border-color 0.2s, color 0.2s;
 }
@@ -543,6 +544,331 @@ footer p {
   z-index: 9999;
 }
 
+/* CHAT */
+.chat-widget {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.8rem;
+}
+.chat-panel {
+  width: min(400px, calc(100vw - 3rem));
+  max-height: min(660px, calc(100vh - 6rem));
+  background: var(--surface);
+  border: 1px solid var(--border-h);
+  border-radius: 6px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(12px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.chat-widget.open .chat-panel {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.chat-head-copy { min-width: 0; }
+.chat-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem;
+  font-weight: 300;
+  color: var(--text);
+}
+.chat-note {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.chat-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  margin: 0.9rem 1rem 0;
+  padding: 0.25rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.chat-mode-tab {
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.65rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+.chat-mode-tab.active {
+  background: var(--card);
+  color: var(--accent);
+}
+.chat-view {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  padding: 1rem;
+}
+.chat-view.active {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.chat-messages {
+  min-height: 190px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.chat-empty {
+  margin: auto 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  text-align: center;
+}
+.chat-bubble {
+  max-width: 84%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.chat-bubble.visitor { align-self: flex-start; }
+.chat-bubble.owner {
+  align-self: flex-end;
+  border-color: rgba(126,184,176,0.32);
+  background: rgba(126,184,176,0.12);
+}
+.chat-bubble-name {
+  display: block;
+  margin-bottom: 0.22rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.chat-close,
+.chat-toggle {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+.chat-close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.chat-close:hover,
+.chat-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.chat-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.chat-input,
+.chat-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: 300 0.9rem/1.5 'Mulish', sans-serif;
+  padding: 0.65rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.chat-input:focus,
+.chat-textarea:focus {
+  border-color: var(--accent);
+}
+.chat-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.chat-submit {
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.75rem 1rem;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.chat-submit:hover { transform: translateY(-1px); }
+.chat-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+.chat-status {
+  min-height: 1.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.chat-status.success { color: var(--accent); }
+.chat-status.error { color: var(--accent2); }
+.chat-owner-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.chat-owner-dashboard[hidden],
+.chat-owner-login[hidden],
+.chat-label[hidden] {
+  display: none;
+}
+.chat-owner-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+.chat-owner-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.chat-owner-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.chat-secondary {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.48rem 0.7rem;
+}
+.chat-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chat-thread-list {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.chat-thread-button {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.62rem 0.7rem;
+  text-align: left;
+}
+.chat-thread-button:hover,
+.chat-thread-button.active {
+  border-color: var(--accent);
+}
+.chat-thread-name {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+.chat-thread-preview {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.24);
+}
+.chat-toggle svg {
+  width: 1rem;
+  height: 1rem;
+  stroke: currentColor;
+}
+.chat-close:focus-visible,
+.chat-toggle:focus-visible,
+.chat-mode-tab:focus-visible,
+.chat-secondary:focus-visible,
+.chat-thread-button:focus-visible,
+.chat-submit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 
 /* ── ANIMATIONS ─────────────────────────────── */
 @keyframes fadeUp {
@@ -563,6 +889,8 @@ footer p {
   .about-grid { grid-template-columns: 1fr; gap: 2.5rem; }
   .project-inner { grid-template-columns: 1fr; gap: 2rem; }
   .project-inner.flip { direction: ltr; }
+  .chat-widget { right: 1rem; bottom: 1rem; }
+  .chat-panel { width: calc(100vw - 2rem); }
   footer { flex-direction: column; gap: 0.5rem; text-align: center; }
 }
 </style>
@@ -919,7 +1247,7 @@ footer p {
   <h2 class="section-title">Get in touch with Jil</h2>
   <div class="contact-inner">
     <div class="contact-links">
-      <a href="mailto:jildominic254@gmail.com" class="c-link primary">jildominic254@gmail.com</a>
+      <button class="c-link primary" id="contactChatOpen" type="button">Open chat</button>
       <a href="https://github.com/sleeepypete" target="_blank" class="c-link">GitHub ↗</a>
       <a href="https://www.linkedin.com/in/jil-dominic-pojarda-aa1a2b2a5/" target="_blank" class="c-link">LinkedIn ↗</a>
     </div>
@@ -930,10 +1258,98 @@ footer p {
   <p> © 2026 Jil Dominic Consulta Pojarda · All rights reserved</p>
 </footer>
 
+<div class="chat-widget" id="chatWidget">
+  <section class="chat-panel" id="chatPanel" aria-labelledby="chatTitle" aria-hidden="true">
+    <div class="chat-head">
+      <div class="chat-head-copy">
+        <h2 class="chat-title" id="chatTitle">Chat with Jil</h2>
+        <p class="chat-note">Messages and replies stay here in this chat box.</p>
+      </div>
+      <button class="chat-close" id="chatClose" type="button" aria-label="Close message box">x</button>
+    </div>
+    <div class="chat-mode-tabs" role="tablist" aria-label="Chat mode">
+      <button class="chat-mode-tab active" type="button" data-chat-mode="visitor" aria-selected="true">Visitor</button>
+      <button class="chat-mode-tab" type="button" data-chat-mode="owner" aria-selected="false">Owner</button>
+    </div>
+
+    <div class="chat-view active" id="visitorChatView" data-chat-view="visitor">
+      <div class="chat-messages" id="visitorMessages" aria-live="polite"></div>
+      <form class="chat-form" id="visitorChatForm">
+        <label class="chat-label" id="visitorNameLabel">
+          Your name
+          <input class="chat-input" name="name" autocomplete="name" maxlength="80"/>
+        </label>
+        <label class="chat-label">
+          Message
+          <textarea class="chat-textarea" name="text" maxlength="1200" required></textarea>
+        </label>
+        <button class="chat-submit" type="submit">Send</button>
+        <p class="chat-status" id="visitorChatStatus" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <div class="chat-view" id="ownerChatView" data-chat-view="owner">
+      <form class="chat-owner-login" id="ownerLoginForm">
+        <label class="chat-label">
+          Owner access code
+          <input class="chat-input" type="password" name="ownerKey" autocomplete="current-password" required/>
+        </label>
+        <button class="chat-submit" type="submit">Unlock replies</button>
+      </form>
+      <div class="chat-owner-dashboard" id="ownerDashboard" hidden>
+        <div class="chat-owner-toolbar">
+          <span class="chat-owner-label">Conversations</span>
+          <button class="chat-secondary" id="ownerRefresh" type="button">Refresh</button>
+        </div>
+        <div class="chat-thread-list" id="ownerThreadList"></div>
+        <div class="chat-messages" id="ownerMessages" aria-live="polite"></div>
+        <form class="chat-form" id="ownerReplyForm">
+          <label class="chat-label">
+            Reply as Jil
+            <textarea class="chat-textarea" name="text" maxlength="1200" required></textarea>
+          </label>
+          <button class="chat-submit" type="submit">Reply</button>
+        </form>
+      </div>
+      <p class="chat-status" id="ownerChatStatus" aria-live="polite"></p>
+    </div>
+  </section>
+  <button class="chat-toggle" id="chatToggle" type="button" aria-controls="chatPanel" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 4 11.5a8.5 8.5 0 1 1 17 0z"></path>
+    </svg>
+    Chat
+  </button>
+</div>
+
 <script>
 const root = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
 const themeMeta = document.querySelector('meta[name="theme-color"]');
+const chatWidget = document.getElementById('chatWidget');
+const chatPanel = document.getElementById('chatPanel');
+const chatToggle = document.getElementById('chatToggle');
+const chatClose = document.getElementById('chatClose');
+const contactChatOpen = document.getElementById('contactChatOpen');
+const chatModeButtons = document.querySelectorAll('[data-chat-mode]');
+const chatViews = document.querySelectorAll('[data-chat-view]');
+const visitorChatForm = document.getElementById('visitorChatForm');
+const visitorMessages = document.getElementById('visitorMessages');
+const visitorNameLabel = document.getElementById('visitorNameLabel');
+const visitorChatStatus = document.getElementById('visitorChatStatus');
+const ownerLoginForm = document.getElementById('ownerLoginForm');
+const ownerDashboard = document.getElementById('ownerDashboard');
+const ownerThreadList = document.getElementById('ownerThreadList');
+const ownerMessages = document.getElementById('ownerMessages');
+const ownerReplyForm = document.getElementById('ownerReplyForm');
+const ownerRefresh = document.getElementById('ownerRefresh');
+const ownerChatStatus = document.getElementById('ownerChatStatus');
+const CHAT_THREAD_KEY = 'jil-chat-thread-id';
+const CHAT_NAME_KEY = 'jil-chat-name';
+const CHAT_OWNER_KEY = 'jil-chat-owner-key';
+let visitorThreadId = '';
+let activeOwnerThreadId = '';
+let ownerKey = '';
 
 function applyTheme(theme) {
   const isLight = theme === 'light';
@@ -960,6 +1376,320 @@ if (themeToggle) {
     applyTheme(nextTheme);
   });
 }
+
+function setChatOpen(isOpen) {
+  if (!chatWidget || !chatToggle) return;
+  chatWidget.classList.toggle('open', isOpen);
+  chatToggle.setAttribute('aria-expanded', String(isOpen));
+  if (chatPanel) chatPanel.setAttribute('aria-hidden', String(!isOpen));
+  if (isOpen) {
+    window.setTimeout(() => {
+      const activeInput = chatPanel.querySelector('.chat-view.active input, .chat-view.active textarea');
+      if (activeInput) activeInput.focus();
+    }, 180);
+  }
+}
+
+if (chatToggle && chatWidget) {
+  chatToggle.addEventListener('click', () => {
+    setChatOpen(!chatWidget.classList.contains('open'));
+  });
+}
+
+if (chatClose) {
+  chatClose.addEventListener('click', () => setChatOpen(false));
+}
+
+if (contactChatOpen) {
+  contactChatOpen.addEventListener('click', () => {
+    setChatOpen(true);
+    setChatMode('visitor');
+  });
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && chatWidget && chatWidget.classList.contains('open')) {
+    setChatOpen(false);
+  }
+});
+
+function getStoredValue(key) {
+  try { return localStorage.getItem(key) || ''; } catch (error) { return ''; }
+}
+
+function setStoredValue(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) {}
+}
+
+function setChatStatus(element, message, type) {
+  if (!element) return;
+  element.className = 'chat-status';
+  if (type) element.classList.add(type);
+  element.textContent = message;
+}
+
+function renderMessages(container, messages, emptyText) {
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!messages || messages.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'chat-empty';
+    empty.textContent = emptyText;
+    container.appendChild(empty);
+    return;
+  }
+
+  messages.forEach((message) => {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${message.author === 'owner' ? 'owner' : 'visitor'}`;
+
+    const name = document.createElement('span');
+    name.className = 'chat-bubble-name';
+    name.textContent = message.author === 'owner' ? 'Jil' : message.name || 'Visitor';
+
+    const text = document.createElement('span');
+    text.textContent = message.text || '';
+
+    bubble.append(name, text);
+    container.appendChild(bubble);
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+async function requestChat(payload) {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Chat request failed');
+  return result;
+}
+
+async function loadVisitorThread(silent = false) {
+  visitorThreadId = getStoredValue(CHAT_THREAD_KEY);
+  const visitorName = getStoredValue(CHAT_NAME_KEY);
+
+  if (visitorNameLabel) visitorNameLabel.hidden = Boolean(visitorThreadId && visitorName);
+  if (!visitorThreadId) {
+    renderMessages(visitorMessages, [], 'Start a conversation here. Jil can reply in this same chat box.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/chat?threadId=${encodeURIComponent(visitorThreadId)}`);
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Conversation unavailable');
+    renderMessages(visitorMessages, result.thread.messages, 'No messages yet.');
+    if (result.thread.name) setStoredValue(CHAT_NAME_KEY, result.thread.name);
+    if (visitorNameLabel) visitorNameLabel.hidden = true;
+    if (!silent) setChatStatus(visitorChatStatus, '', '');
+  } catch (error) {
+    if (!silent) setChatStatus(visitorChatStatus, error.message, 'error');
+  }
+}
+
+function setChatMode(mode) {
+  chatModeButtons.forEach((button) => {
+    const isActive = button.dataset.chatMode === mode;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+  chatViews.forEach((view) => {
+    view.classList.toggle('active', view.dataset.chatView === mode);
+  });
+
+  if (mode === 'owner') {
+    setupOwnerMode();
+  } else {
+    loadVisitorThread(true);
+  }
+}
+
+chatModeButtons.forEach((button) => {
+  button.addEventListener('click', () => setChatMode(button.dataset.chatMode));
+});
+
+if (visitorChatForm) {
+  visitorChatForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = visitorChatForm.querySelector('.chat-submit');
+    const formData = new FormData(visitorChatForm);
+    const storedName = getStoredValue(CHAT_NAME_KEY);
+    const payload = {
+      action: 'visitor-message',
+      threadId: getStoredValue(CHAT_THREAD_KEY),
+      name: storedName || String(formData.get('name') || '').trim(),
+      text: String(formData.get('text') || '').trim()
+    };
+
+    setChatStatus(visitorChatStatus, 'Sending...', '');
+    submitButton.disabled = true;
+
+    try {
+      const result = await requestChat(payload);
+      setStoredValue(CHAT_THREAD_KEY, result.threadId);
+      setStoredValue(CHAT_NAME_KEY, result.thread.name);
+      visitorChatForm.reset();
+      renderMessages(visitorMessages, result.thread.messages, 'No messages yet.');
+      if (visitorNameLabel) visitorNameLabel.hidden = true;
+      setChatStatus(visitorChatStatus, "Sent. Watch this chat box for Jil's reply.", 'success');
+    } catch (error) {
+      setChatStatus(visitorChatStatus, error.message, 'error');
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
+function setupOwnerMode() {
+  ownerKey = getStoredValue(CHAT_OWNER_KEY);
+  if (ownerKey) {
+    unlockOwnerDashboard();
+    loadOwnerThreads(true);
+  }
+}
+
+function unlockOwnerDashboard() {
+  if (ownerLoginForm) ownerLoginForm.hidden = true;
+  if (ownerDashboard) ownerDashboard.hidden = false;
+}
+
+function renderThreadList(threads) {
+  if (!ownerThreadList) return;
+  ownerThreadList.innerHTML = '';
+
+  if (!threads || threads.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'chat-empty';
+    empty.textContent = 'No visitor conversations yet.';
+    ownerThreadList.appendChild(empty);
+    renderMessages(ownerMessages, [], 'Choose a conversation to reply.');
+    return;
+  }
+
+  threads.forEach((thread) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `chat-thread-button${thread.id === activeOwnerThreadId ? ' active' : ''}`;
+    button.dataset.threadId = thread.id;
+
+    const name = document.createElement('span');
+    name.className = 'chat-thread-name';
+    name.textContent = thread.name || 'Visitor';
+
+    const preview = document.createElement('span');
+    preview.className = 'chat-thread-preview';
+    preview.textContent = thread.preview || 'Open conversation';
+
+    button.append(name, preview);
+    button.addEventListener('click', () => loadOwnerThread(thread.id));
+    ownerThreadList.appendChild(button);
+  });
+}
+
+async function loadOwnerThreads(silent = false) {
+  if (!ownerKey) return;
+  try {
+    const result = await requestChat({ action: 'owner-list', ownerKey });
+    renderThreadList(result.threads);
+    if (!activeOwnerThreadId && result.threads && result.threads[0]) {
+      await loadOwnerThread(result.threads[0].id);
+    } else if (activeOwnerThreadId) {
+      await loadOwnerThread(activeOwnerThreadId, true);
+    }
+    if (!silent) setChatStatus(ownerChatStatus, '', '');
+  } catch (error) {
+    if (!silent) setChatStatus(ownerChatStatus, error.message, 'error');
+  }
+}
+
+async function loadOwnerThread(threadId, silent = false) {
+  activeOwnerThreadId = threadId;
+  try {
+    const result = await requestChat({ action: 'owner-thread', ownerKey, threadId });
+    renderMessages(ownerMessages, result.thread.messages, 'No messages yet.');
+    ownerThreadList.querySelectorAll('.chat-thread-button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.threadId === activeOwnerThreadId);
+    });
+    if (!silent) setChatStatus(ownerChatStatus, '', '');
+  } catch (error) {
+    if (!silent) setChatStatus(ownerChatStatus, error.message, 'error');
+  }
+}
+
+if (ownerLoginForm) {
+  ownerLoginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = ownerLoginForm.querySelector('.chat-submit');
+    const formData = new FormData(ownerLoginForm);
+    ownerKey = String(formData.get('ownerKey') || '').trim();
+
+    setChatStatus(ownerChatStatus, 'Unlocking...', '');
+    submitButton.disabled = true;
+
+    try {
+      await requestChat({ action: 'owner-login', ownerKey });
+      setStoredValue(CHAT_OWNER_KEY, ownerKey);
+      unlockOwnerDashboard();
+      setChatStatus(ownerChatStatus, '', '');
+      await loadOwnerThreads(true);
+    } catch (error) {
+      setChatStatus(ownerChatStatus, error.message, 'error');
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
+if (ownerRefresh) {
+  ownerRefresh.addEventListener('click', () => loadOwnerThreads(false));
+}
+
+if (ownerReplyForm) {
+  ownerReplyForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = ownerReplyForm.querySelector('.chat-submit');
+    const formData = new FormData(ownerReplyForm);
+    const text = String(formData.get('text') || '').trim();
+
+    if (!activeOwnerThreadId) {
+      setChatStatus(ownerChatStatus, 'Choose a conversation first.', 'error');
+      return;
+    }
+
+    setChatStatus(ownerChatStatus, 'Sending reply...', '');
+    submitButton.disabled = true;
+
+    try {
+      const result = await requestChat({ action: 'owner-reply', ownerKey, threadId: activeOwnerThreadId, text });
+      ownerReplyForm.reset();
+      renderMessages(ownerMessages, result.thread.messages, 'No messages yet.');
+      setChatStatus(ownerChatStatus, 'Reply sent in the chat.', 'success');
+      await loadOwnerThreads(true);
+    } catch (error) {
+      setChatStatus(ownerChatStatus, error.message, 'error');
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
+loadVisitorThread(true);
+
+window.setInterval(() => {
+  if (!chatWidget || !chatWidget.classList.contains('open')) return;
+  const ownerViewActive = document.querySelector('[data-chat-view="owner"].active');
+  if (ownerViewActive && ownerKey) {
+    loadOwnerThreads(true);
+  } else {
+    loadVisitorThread(true);
+  }
+}, 6000);
+
 function swapImg(id, src) {
   document.getElementById(id).src = src;
 }
