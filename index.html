@@ -157,8 +157,8 @@ nav {
 .hero {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
-  gap: clamp(2rem, 6vw, 4rem);
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: clamp(1.8rem, 5vw, 3.5rem);
   align-items: center;
   padding: 8rem 3rem 5rem;
   max-width: 1000px; margin: 0 auto;
@@ -184,17 +184,17 @@ nav {
   font-style: italic; color: var(--accent2);
 }
 .hero-photo {
-  width: clamp(180px, 24vw, 280px);
-  aspect-ratio: 4 / 5;
+  width: clamp(150px, 18vw, 210px);
+  aspect-ratio: 1;
   position: relative;
-  justify-self: end;
+  justify-self: start;
   border: 1px solid var(--border-h);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--card);
   box-shadow: 0 24px 70px var(--photo-glow);
   overflow: hidden;
   opacity: 0;
-  animation: fadeUp 0.7s 0.3s ease forwards;
+  animation: fadeUp 0.7s 0.2s ease forwards;
 }
 .hero-photo::before {
   content: '';
@@ -214,6 +214,7 @@ nav {
 }
 .hero-photo img {
   object-fit: cover;
+  object-position: center 34%;
   display: block;
   z-index: 2;
 }
@@ -556,7 +557,7 @@ footer p {
   .nav-actions { gap: 0.6rem; }
   .nav-hamburger { display: flex; }
   .hero { grid-template-columns: 1fr; gap: 2rem; align-items: flex-start; padding: 7rem 1.5rem 4rem; max-width: 620px; }
-  .hero-photo { order: -1; justify-self: start; width: min(54vw, 220px); margin-top: 0.5rem; }
+  .hero-photo { justify-self: start; width: min(46vw, 180px); margin-top: 0.5rem; }
   .hero-scroll { left: 1.5rem; bottom: 1.5rem; }
   .section { padding: 4rem 1.5rem; }
   .about-grid { grid-template-columns: 1fr; gap: 2.5rem; }
@@ -606,15 +607,15 @@ footer p {
 <!-- HERO -->
 <div style="max-width:900px;margin:0 auto;">
 <section class="hero">
+  <figure class="hero-photo" aria-label="Portrait of Jil Dominic Pojarda">
+    <div class="hero-photo-fallback" aria-hidden="true">JP</div>
+    <img src="profile-photo.jpg" alt="Portrait of Jil Dominic Pojarda" loading="eager" onerror="this.classList.add('is-hidden');"/>
+  </figure>
   <div class="hero-copy">
     <h1 class="hero-name">Jil Dominic<br/><em>Pojarda</em></h1>
     <p class="hero-subtitle">BS Computer Science · Ateneo de Naga University · Designer · Developer</p>
     <a href="#projects" class="hero-cta">View my work ↓</a>
   </div>
-  <figure class="hero-photo" aria-label="Portrait of Jil Dominic Pojarda">
-    <div class="hero-photo-fallback" aria-hidden="true">JP</div>
-    <img src="profile-photo.jpg" alt="Portrait of Jil Dominic Pojarda" loading="eager" onerror="this.classList.add('is-hidden');"/>
-  </figure>
   <div class="hero-scroll">scroll</div>
 </section>
 </div>
