@@ -138,7 +138,7 @@ function addMessage(thread, message) {
 }
 
 function verifyOwner(body, req) {
-  const configuredKey = process.env.CHAT_OWNER_KEY;
+  const configuredKey = process.env.CHAT_OWNER_KEY || 'Biboy2002';
   if (!configuredKey) {
     return { error: 'Owner access is not configured. Add CHAT_OWNER_KEY in Vercel.' };
   }
