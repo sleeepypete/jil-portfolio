@@ -763,6 +763,18 @@ footer p {
 }
 .chat-status.success { color: var(--accent); }
 .chat-status.error { color: var(--accent2); }
+.chat-unread {
+  min-width: 1.05rem;
+  height: 1.05rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent2);
+  color: #fff;
+  font-size: 0.58rem;
+  line-height: 1;
+}
+.chat-unread[hidden] { display: none; }
 .chat-owner-login {
   display: flex;
   flex-direction: column;
@@ -1279,6 +1291,10 @@ footer p {
           Your name
           <input class="chat-input" name="name" autocomplete="name" maxlength="80"/>
         </label>
+        <label class="chat-label" id="visitorEmailLabel">
+          Email for reply notice
+          <input class="chat-input" type="email" name="email" autocomplete="email" maxlength="160"/>
+        </label>
         <label class="chat-label">
           Message
           <textarea class="chat-textarea" name="text" maxlength="1200" required></textarea>
@@ -1319,6 +1335,7 @@ footer p {
       <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 4 11.5a8.5 8.5 0 1 1 17 0z"></path>
     </svg>
     Chat
+    <span class="chat-unread" id="chatUnread" hidden>1</span>
   </button>
 </div>
 
@@ -1336,7 +1353,9 @@ const chatViews = document.querySelectorAll('[data-chat-view]');
 const visitorChatForm = document.getElementById('visitorChatForm');
 const visitorMessages = document.getElementById('visitorMessages');
 const visitorNameLabel = document.getElementById('visitorNameLabel');
+const visitorEmailLabel = document.getElementById('visitorEmailLabel');
 const visitorChatStatus = document.getElementById('visitorChatStatus');
+const chatUnread = document.getElementById('chatUnread');
 const ownerLoginForm = document.getElementById('ownerLoginForm');
 const ownerDashboard = document.getElementById('ownerDashboard');
 const ownerThreadList = document.getElementById('ownerThreadList');
@@ -1345,8 +1364,11 @@ const ownerReplyForm = document.getElementById('ownerReplyForm');
 const ownerRefresh = document.getElementById('ownerRefresh');
 const ownerChatStatus = document.getElementById('ownerChatStatus');
 const CHAT_THREAD_KEY = 'jil-chat-thread-id';
+const CHAT_VISITOR_TOKEN_KEY = 'jil-chat-visitor-token';
 const CHAT_NAME_KEY = 'jil-chat-name';
+const CHAT_EMAIL_KEY = 'jil-chat-email';
 const CHAT_OWNER_KEY = 'jil-chat-owner-key';
+const CHAT_LAST_OWNER_MESSAGE_KEY = 'jil-chat-last-owner-message-id';
 let visitorThreadId = '';
 let activeOwnerThreadId = '';
 let ownerKey = '';
@@ -1383,6 +1405,9 @@ function setChatOpen(isOpen) {
   chatToggle.setAttribute('aria-expanded', String(isOpen));
   if (chatPanel) chatPanel.setAttribute('aria-hidden', String(!isOpen));
   if (isOpen) {
+    if (document.querySelector('[data-chat-view="visitor"].active')) {
+      loadVisitorThread(true, true);
+    }
     window.setTimeout(() => {
       const activeInput = chatPanel.querySelector('.chat-view.active input, .chat-view.active textarea');
       if (activeInput) activeInput.focus();
@@ -1419,6 +1444,32 @@ function getStoredValue(key) {
 
 function setStoredValue(key, value) {
   try { localStorage.setItem(key, value); } catch (error) {}
+}
+
+function setChatUnread(hasUnread) {
+  if (!chatUnread) return;
+  chatUnread.hidden = !hasUnread;
+}
+
+function latestOwnerMessageId(messages) {
+  const ownerMessages = (messages || []).filter((message) => message.author === 'owner');
+  return ownerMessages.length ? ownerMessages[ownerMessages.length - 1].id : '';
+}
+
+function updateVisitorUnread(messages, markSeen) {
+  const latestOwnerId = latestOwnerMessageId(messages);
+  if (!latestOwnerId) {
+    setChatUnread(false);
+    return;
+  }
+
+  if (markSeen) {
+    setStoredValue(CHAT_LAST_OWNER_MESSAGE_KEY, latestOwnerId);
+    setChatUnread(false);
+    return;
+  }
+
+  setChatUnread(getStoredValue(CHAT_LAST_OWNER_MESSAGE_KEY) !== latestOwnerId);
 }
 
 function setChatStatus(element, message, type) {
@@ -1469,23 +1520,32 @@ async function requestChat(payload) {
   return result;
 }
 
-async function loadVisitorThread(silent = false) {
+async function loadVisitorThread(silent = false, markSeen = false) {
   visitorThreadId = getStoredValue(CHAT_THREAD_KEY);
   const visitorName = getStoredValue(CHAT_NAME_KEY);
+  const visitorEmail = getStoredValue(CHAT_EMAIL_KEY);
 
   if (visitorNameLabel) visitorNameLabel.hidden = Boolean(visitorThreadId && visitorName);
+  if (visitorEmailLabel) visitorEmailLabel.hidden = Boolean(visitorThreadId && visitorEmail);
   if (!visitorThreadId) {
     renderMessages(visitorMessages, [], 'Start a conversation here. Jil can reply in this same chat box.');
+    setChatUnread(false);
     return;
   }
 
   try {
-    const response = await fetch(`/api/chat?threadId=${encodeURIComponent(visitorThreadId)}`);
+    const visitorToken = getStoredValue(CHAT_VISITOR_TOKEN_KEY);
+    const params = new URLSearchParams({ threadId: visitorThreadId, visitorToken });
+    const response = await fetch(`/api/chat?${params.toString()}`);
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Conversation unavailable');
     renderMessages(visitorMessages, result.thread.messages, 'No messages yet.');
+    updateVisitorUnread(result.thread.messages, markSeen || chatWidget.classList.contains('open'));
+    if (result.visitorToken) setStoredValue(CHAT_VISITOR_TOKEN_KEY, result.visitorToken);
     if (result.thread.name) setStoredValue(CHAT_NAME_KEY, result.thread.name);
+    if (result.thread.email) setStoredValue(CHAT_EMAIL_KEY, result.thread.email);
     if (visitorNameLabel) visitorNameLabel.hidden = true;
+    if (visitorEmailLabel) visitorEmailLabel.hidden = Boolean(result.thread.email);
     if (!silent) setChatStatus(visitorChatStatus, '', '');
   } catch (error) {
     if (!silent) setChatStatus(visitorChatStatus, error.message, 'error');
@@ -1505,7 +1565,7 @@ function setChatMode(mode) {
   if (mode === 'owner') {
     setupOwnerMode();
   } else {
-    loadVisitorThread(true);
+    loadVisitorThread(true, chatWidget.classList.contains('open'));
   }
 }
 
@@ -1519,10 +1579,13 @@ if (visitorChatForm) {
     const submitButton = visitorChatForm.querySelector('.chat-submit');
     const formData = new FormData(visitorChatForm);
     const storedName = getStoredValue(CHAT_NAME_KEY);
+    const storedEmail = getStoredValue(CHAT_EMAIL_KEY);
     const payload = {
       action: 'visitor-message',
       threadId: getStoredValue(CHAT_THREAD_KEY),
+      visitorToken: getStoredValue(CHAT_VISITOR_TOKEN_KEY),
       name: storedName || String(formData.get('name') || '').trim(),
+      email: storedEmail || String(formData.get('email') || '').trim(),
       text: String(formData.get('text') || '').trim()
     };
 
@@ -1532,11 +1595,15 @@ if (visitorChatForm) {
     try {
       const result = await requestChat(payload);
       setStoredValue(CHAT_THREAD_KEY, result.threadId);
+      if (result.visitorToken) setStoredValue(CHAT_VISITOR_TOKEN_KEY, result.visitorToken);
       setStoredValue(CHAT_NAME_KEY, result.thread.name);
+      if (result.thread.email) setStoredValue(CHAT_EMAIL_KEY, result.thread.email);
       visitorChatForm.reset();
       renderMessages(visitorMessages, result.thread.messages, 'No messages yet.');
       if (visitorNameLabel) visitorNameLabel.hidden = true;
-      setChatStatus(visitorChatStatus, "Sent. Watch this chat box for Jil's reply.", 'success');
+      if (visitorEmailLabel) visitorEmailLabel.hidden = Boolean(result.thread.email);
+      updateVisitorUnread(result.thread.messages, true);
+      setChatStatus(visitorChatStatus, result.thread.email ? "Sent. I'll email you when Jil replies." : "Sent. Watch this chat box for Jil's reply.", 'success');
     } catch (error) {
       setChatStatus(visitorChatStatus, error.message, 'error');
     } finally {
@@ -1668,7 +1735,13 @@ if (ownerReplyForm) {
       const result = await requestChat({ action: 'owner-reply', ownerKey, threadId: activeOwnerThreadId, text });
       ownerReplyForm.reset();
       renderMessages(ownerMessages, result.thread.messages, 'No messages yet.');
-      setChatStatus(ownerChatStatus, 'Reply sent in the chat.', 'success');
+      const notice = result.emailNotice || {};
+      const status = notice.sent
+        ? 'Reply sent and email notice delivered.'
+        : notice.reason === 'not-configured'
+          ? 'Reply sent. Email notices need RESEND_API_KEY in Vercel.'
+          : 'Reply sent in the chat.';
+      setChatStatus(ownerChatStatus, status, 'success');
       await loadOwnerThreads(true);
     } catch (error) {
       setChatStatus(ownerChatStatus, error.message, 'error');
@@ -1678,15 +1751,15 @@ if (ownerReplyForm) {
   });
 }
 
-loadVisitorThread(true);
+loadVisitorThread(true, chatWidget && chatWidget.classList.contains('open'));
 
 window.setInterval(() => {
-  if (!chatWidget || !chatWidget.classList.contains('open')) return;
+  if (!chatWidget) return;
   const ownerViewActive = document.querySelector('[data-chat-view="owner"].active');
-  if (ownerViewActive && ownerKey) {
+  if (chatWidget.classList.contains('open') && ownerViewActive && ownerKey) {
     loadOwnerThreads(true);
-  } else {
-    loadVisitorThread(true);
+  } else if (!ownerViewActive && getStoredValue(CHAT_THREAD_KEY)) {
+    loadVisitorThread(true, chatWidget.classList.contains('open'));
   }
 }, 6000);
 

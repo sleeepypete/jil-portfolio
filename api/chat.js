@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 
 const MAX_NAME_LENGTH = 80;
 const MAX_TEXT_LENGTH = 1200;
+const MAX_EMAIL_LENGTH = 160;
 const MAX_MESSAGES_PER_THREAD = 120;
 const MAX_THREADS = 60;
 const THREAD_LIST_KEY = 'jil-portfolio-chat:threads';
@@ -39,10 +40,41 @@ function validateText(text, label, maxLength) {
   return { value: cleaned };
 }
 
+function validateOptionalEmail(email) {
+  const cleaned = cleanString(email).toLowerCase();
+  if (!cleaned) return { value: '' };
+  if (cleaned.length > MAX_EMAIL_LENGTH) {
+    return { error: 'Email is too long' };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+    return { error: 'Enter a valid email address' };
+  }
+  return { value: cleaned };
+}
+
+function requestOrigin(req) {
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers.host || '';
+  return host ? `${protocol}://${host}` : '';
+}
+
+function emailHtml(text, siteUrl) {
+  const escapedText = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\n/g, '<br>');
+  const link = siteUrl ? `<p><a href="${siteUrl}">Open the portfolio chat</a></p>` : '';
+  return `<p>Jil replied to your portfolio chat:</p><blockquote>${escapedText}</blockquote>${link}<p>You can continue the conversation from the same browser where you started it.</p>`;
+}
+
 function publicThread(thread) {
   return {
     id: thread.id,
     name: thread.name,
+    email: thread.email || '',
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
     messages: thread.messages || []
@@ -111,6 +143,7 @@ async function saveThreadSummary(thread) {
   const summary = {
     id: thread.id,
     name: thread.name,
+    email: thread.email || '',
     updatedAt: thread.updatedAt,
     preview: lastMessage ? lastMessage.text.slice(0, 120) : ''
   };
@@ -137,8 +170,51 @@ function addMessage(thread, message) {
   return { ...thread, messages, updatedAt: now };
 }
 
+function visitorTokenMatches(thread, providedToken) {
+  if (!thread.visitorToken) return true;
+  return cleanString(providedToken) === thread.visitorToken;
+}
+
+async function sendReplyEmail(thread, replyText, req) {
+  if (!thread.email) return { sent: false, reason: 'no-email' };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { sent: false, reason: 'not-configured' };
+
+  const siteUrl = process.env.CHAT_SITE_URL || requestOrigin(req);
+  const from = process.env.CHAT_FROM_EMAIL || 'Jil Portfolio <onboarding@resend.dev>';
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: thread.email,
+        subject: 'Jil replied to your portfolio chat',
+        text: `Jil replied to your portfolio chat:\n\n${replyText}\n\nOpen the portfolio chat from the same browser where you started it: ${siteUrl}`,
+        html: emailHtml(replyText, siteUrl)
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Reply email failed:', response.status, errorText);
+      return { sent: false, reason: 'failed' };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    console.error('Reply email failed:', error);
+    return { sent: false, reason: 'failed' };
+  }
+}
+
 function verifyOwner(body, req) {
-  const configuredKey = process.env.CHAT_OWNER_KEY || 'Biboy2002';
+  const configuredKey = process.env.CHAT_OWNER_KEY;
   if (!configuredKey) {
     return { error: 'Owner access is not configured. Add CHAT_OWNER_KEY in Vercel.' };
   }
@@ -155,6 +231,9 @@ async function handleVisitorMessage(body, res) {
   const textResult = validateText(body.text, 'Message', MAX_TEXT_LENGTH);
   if (textResult.error) return sendJson(res, 400, { error: textResult.error });
 
+  const emailResult = validateOptionalEmail(body.email);
+  if (emailResult.error) return sendJson(res, 400, { error: emailResult.error });
+
   let thread = await getThread(cleanString(body.threadId));
   if (!thread) {
     const nameResult = validateText(body.name, 'Name', MAX_NAME_LENGTH);
@@ -163,18 +242,28 @@ async function handleVisitorMessage(body, res) {
     const now = new Date().toISOString();
     thread = {
       id: randomUUID(),
+      visitorToken: randomUUID(),
       name: nameResult.value,
+      email: emailResult.value,
       createdAt: now,
       updatedAt: now,
       messages: []
     };
+  } else {
+    if (!visitorTokenMatches(thread, body.visitorToken)) {
+      return sendJson(res, 403, { error: 'Conversation access expired. Start a new chat from this browser.' });
+    }
+    if (!thread.visitorToken) thread = { ...thread, visitorToken: randomUUID() };
+    if (emailResult.value && emailResult.value !== thread.email) {
+      thread = { ...thread, email: emailResult.value };
+    }
   }
 
   thread = addMessage(thread, createMessage('visitor', thread.name, textResult.value));
   await saveThread(thread);
   await saveThreadSummary(thread);
 
-  return sendJson(res, 200, { threadId: thread.id, thread: publicThread(thread) });
+  return sendJson(res, 200, { threadId: thread.id, visitorToken: thread.visitorToken, thread: publicThread(thread) });
 }
 
 async function handleOwnerList(body, req, res) {
@@ -209,16 +298,21 @@ async function handleOwnerReply(body, req, res) {
   await saveThread(thread);
   await saveThreadSummary(thread);
 
-  return sendJson(res, 200, { thread: publicThread(thread) });
+  const emailNotice = await sendReplyEmail(thread, textResult.value, req);
+  return sendJson(res, 200, { thread: publicThread(thread), emailNotice });
 }
 
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
-      const threadId = readQuery(req).get('threadId');
+      const query = readQuery(req);
+      const threadId = query.get('threadId');
       const thread = await getThread(cleanString(threadId));
       if (!thread) return sendJson(res, 404, { error: 'Conversation not found' });
-      return sendJson(res, 200, { thread: publicThread(thread) });
+      if (!visitorTokenMatches(thread, query.get('visitorToken'))) {
+        return sendJson(res, 403, { error: 'Conversation access expired. Start a new chat from this browser.' });
+      }
+      return sendJson(res, 200, { thread: publicThread(thread), visitorToken: thread.visitorToken || '' });
     }
 
     if (req.method !== 'POST') {
