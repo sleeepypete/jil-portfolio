@@ -2,7 +2,6 @@ const { randomUUID } = require('crypto');
 
 const MAX_NAME_LENGTH = 80;
 const MAX_TEXT_LENGTH = 1200;
-const MAX_EMAIL_LENGTH = 160;
 const MAX_MESSAGES_PER_THREAD = 120;
 const MAX_THREADS = 60;
 const THREAD_LIST_KEY = 'jil-portfolio-chat:threads';
@@ -40,73 +39,19 @@ function validateText(text, label, maxLength) {
   return { value: cleaned };
 }
 
-function validateOptionalEmail(email) {
-  const cleaned = cleanString(email).toLowerCase();
-  if (!cleaned) return { value: '' };
-  if (cleaned.length > MAX_EMAIL_LENGTH) {
-    return { error: 'Email is too long' };
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
-    return { error: 'Enter a valid email address' };
-  }
-  return { value: cleaned };
-}
-
-function requestOrigin(req) {
-  const protocol = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host || '';
-  return host ? `${protocol}://${host}` : '';
-}
-
-function emailConfig() {
-  const apiKey = process.env.RESEND_API_KEY;
-  const configuredFrom = process.env.CHAT_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || '';
-  const from = configuredFrom || 'Jil Portfolio <onboarding@resend.dev>';
-  const replyTo = process.env.CHAT_REPLY_TO_EMAIL || process.env.RESEND_REPLY_TO_EMAIL || process.env.REPLY_TO_EMAIL || configuredFrom;
-
-  if (!apiKey) {
-    return { error: 'Email notices need RESEND_API_KEY in Vercel.' };
-  }
-
-  return {
-    apiKey,
-    from,
-    replyTo,
-    usingDefaultFrom: !configuredFrom
-  };
-}
-
-function parseEmailError(text) {
-  if (!text) return '';
-  try {
-    const parsed = JSON.parse(text);
-    return parsed.message || parsed.error || text;
-  } catch (error) {
-    return text;
-  }
-}
-
-function emailHtml(text, siteUrl) {
-  const escapedText = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/\n/g, '<br>');
-  const link = siteUrl ? `<p><a href="${siteUrl}">Open the portfolio chat</a></p>` : '';
-  return `<p>Jil replied to your portfolio chat:</p><blockquote>${escapedText}</blockquote>${link}<p>You can continue the conversation from the same browser where you started it.</p>`;
-}
-
 function publicThread(thread) {
   return {
     id: thread.id,
     name: thread.name,
-    email: thread.email || '',
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
     messages: thread.messages || []
   };
+}
+
+function publicThreadSummary(summary) {
+  const { email, ...publicSummary } = summary;
+  return publicSummary;
 }
 
 function storageConfig() {
@@ -171,7 +116,6 @@ async function saveThreadSummary(thread) {
   const summary = {
     id: thread.id,
     name: thread.name,
-    email: thread.email || '',
     updatedAt: thread.updatedAt,
     preview: lastMessage ? lastMessage.text.slice(0, 120) : ''
   };
@@ -203,53 +147,6 @@ function visitorTokenMatches(thread, providedToken) {
   return cleanString(providedToken) === thread.visitorToken;
 }
 
-async function sendReplyEmail(thread, replyText, req) {
-  if (!thread.email) return { sent: false, reason: 'no-email' };
-
-  const config = emailConfig();
-  if (config.error) return { sent: false, reason: 'not-configured', message: config.error };
-
-  const siteUrl = process.env.CHAT_SITE_URL || requestOrigin(req);
-  const emailPayload = {
-    from: config.from,
-    to: thread.email,
-    subject: 'Jil replied to your portfolio chat',
-    text: `Jil replied to your portfolio chat:\n\n${replyText}\n\nOpen the portfolio chat from the same browser where you started it: ${siteUrl}`,
-    html: emailHtml(replyText, siteUrl)
-  };
-
-  if (config.replyTo) {
-    emailPayload.reply_to = config.replyTo;
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'jil-portfolio-chat/1.0'
-      },
-      body: JSON.stringify(emailPayload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let message = parseEmailError(errorText);
-      if (config.usingDefaultFrom) {
-        message = `${message || 'Email request failed'} Set CHAT_FROM_EMAIL or RESEND_FROM_EMAIL to a verified Resend sender in Vercel.`;
-      }
-      console.error('Reply email failed:', response.status, errorText);
-      return { sent: false, reason: 'failed', status: response.status, message };
-    }
-
-    return { sent: true };
-  } catch (error) {
-    console.error('Reply email failed:', error);
-    return { sent: false, reason: 'failed', message: error.message || 'Email request failed' };
-  }
-}
-
 function verifyOwner(body, req) {
   const configuredKey = process.env.CHAT_OWNER_KEY;
   if (!configuredKey) {
@@ -268,9 +165,6 @@ async function handleVisitorMessage(body, res) {
   const textResult = validateText(body.text, 'Message', MAX_TEXT_LENGTH);
   if (textResult.error) return sendJson(res, 400, { error: textResult.error });
 
-  const emailResult = validateOptionalEmail(body.email);
-  if (emailResult.error) return sendJson(res, 400, { error: emailResult.error });
-
   let thread = await getThread(cleanString(body.threadId));
   if (!thread) {
     const nameResult = validateText(body.name, 'Name', MAX_NAME_LENGTH);
@@ -281,7 +175,6 @@ async function handleVisitorMessage(body, res) {
       id: randomUUID(),
       visitorToken: randomUUID(),
       name: nameResult.value,
-      email: emailResult.value,
       createdAt: now,
       updatedAt: now,
       messages: []
@@ -291,9 +184,6 @@ async function handleVisitorMessage(body, res) {
       return sendJson(res, 403, { error: 'Conversation access expired. Start a new chat from this browser.' });
     }
     if (!thread.visitorToken) thread = { ...thread, visitorToken: randomUUID() };
-    if (emailResult.value && emailResult.value !== thread.email) {
-      thread = { ...thread, email: emailResult.value };
-    }
   }
 
   thread = addMessage(thread, createMessage('visitor', thread.name, textResult.value));
@@ -307,7 +197,7 @@ async function handleOwnerList(body, req, res) {
   const owner = verifyOwner(body, req);
   if (owner.error) return sendJson(res, owner.statusCode || 500, { error: owner.error });
 
-  const threads = await getThreadList();
+  const threads = (await getThreadList()).map(publicThreadSummary);
   return sendJson(res, 200, { threads });
 }
 
@@ -335,8 +225,7 @@ async function handleOwnerReply(body, req, res) {
   await saveThread(thread);
   await saveThreadSummary(thread);
 
-  const emailNotice = await sendReplyEmail(thread, textResult.value, req);
-  return sendJson(res, 200, { thread: publicThread(thread), emailNotice });
+  return sendJson(res, 200, { thread: publicThread(thread) });
 }
 
 module.exports = async function handler(req, res) {
