@@ -1,0 +1,19 @@
+{
+  "name": "Jil Dominic Pojarda Portfolio",
+  "short_name": "Jil Portfolio",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#0d0f12",
+  "background_color": "#0d0f12",
+  "display": "standalone"
+}
