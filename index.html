@@ -15,6 +15,17 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Mulish:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script>
+(() => {
+  try {
+    const storedTheme = localStorage.getItem('portfolio-theme');
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    if (storedTheme === 'light' || (!storedTheme && prefersLight)) {
+      document.documentElement.classList.add('light-mode');
+    }
+  } catch (error) {}
+})();
+</script>
 <style>
 :root {
   --bg:        #0d0f12;
@@ -27,6 +38,25 @@
   --text:      #d8dde4;
   --muted:     #6b7280;
   --dim:       #3d4450;
+  --nav-bg:    rgba(13,15,18,0.85);
+  --mobile-menu-bg: rgba(13,15,18,0.97);
+  --photo-glow: rgba(126,184,176,0.18);
+}
+
+:root.light-mode {
+  --bg:        #f6f7f4;
+  --surface:   #ffffff;
+  --card:      #edf2f0;
+  --border:    rgba(30,39,43,0.10);
+  --border-h:  rgba(30,39,43,0.18);
+  --accent:    #287a72;
+  --accent2:   #9a6a38;
+  --text:      #20262b;
+  --muted:     #5d6870;
+  --dim:       #9aa3aa;
+  --nav-bg:    rgba(246,247,244,0.88);
+  --mobile-menu-bg: rgba(246,247,244,0.98);
+  --photo-glow: rgba(40,122,114,0.16);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,6 +69,7 @@ body {
   color: var(--text);
   overflow-x: hidden;
   line-height: 1.7;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* ── SCROLLBAR ──────────────────────────────── */
@@ -51,7 +82,7 @@ nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 3rem;
-  background: rgba(13,15,18,0.85);
+  background: var(--nav-bg);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
@@ -68,6 +99,35 @@ nav {
   text-decoration: none; transition: color 0.2s;
 }
 .nav-links a:hover { color: var(--accent); }
+.nav-actions {
+  display: flex; align-items: center; gap: 1rem;
+}
+.theme-toggle {
+  width: 2.35rem; height: 2.35rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s, transform 0.2s;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.theme-icon {
+  width: 1rem; height: 1rem;
+  stroke: currentColor;
+}
+.theme-icon-moon { display: none; }
+:root.light-mode .theme-icon-sun { display: none; }
+:root.light-mode .theme-icon-moon { display: block; }
 .nav-hamburger {
   display: none; flex-direction: column; gap: 5px;
   cursor: pointer; padding: 4px; background: none; border: none;
@@ -81,7 +141,7 @@ nav {
 .nav-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 .mobile-menu {
   display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(13,15,18,0.97); backdrop-filter: blur(20px);
+  background: var(--mobile-menu-bg); backdrop-filter: blur(20px);
   z-index: 99; flex-direction: column;
   align-items: center; justify-content: center; gap: 2.5rem;
 }
@@ -96,12 +156,15 @@ nav {
 /* ── HERO ───────────────────────────────────── */
 .hero {
   min-height: 100vh;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: clamp(2rem, 6vw, 4rem);
+  align-items: center;
   padding: 8rem 3rem 5rem;
-  max-width: 900px; margin: 0 auto;
+  max-width: 1000px; margin: 0 auto;
   position: relative;
 }
+.hero-copy { min-width: 0; }
 .hero-mono {
   font-family: 'DM Mono', monospace;
   font-size: 0.75rem; letter-spacing: 0.12em;
@@ -119,6 +182,52 @@ nav {
 }
 .hero-name em {
   font-style: italic; color: var(--accent2);
+}
+.hero-photo {
+  width: clamp(180px, 24vw, 280px);
+  aspect-ratio: 4 / 5;
+  position: relative;
+  justify-self: end;
+  border: 1px solid var(--border-h);
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: 0 24px 70px var(--photo-glow);
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.3s ease forwards;
+}
+.hero-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,0.08) 45% 46%, transparent 46%),
+    radial-gradient(circle at 30% 18%, var(--photo-glow), transparent 36%);
+  z-index: 0;
+}
+.hero-photo img,
+.hero-photo-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hero-photo img {
+  object-fit: cover;
+  display: block;
+  z-index: 2;
+}
+.hero-photo img.is-hidden { display: none; }
+.hero-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(3rem, 8vw, 5.8rem);
+  font-weight: 300;
+  color: var(--accent2);
+  letter-spacing: 0;
 }
 .hero-subtitle {
   font-family: 'DM Mono', monospace;
@@ -444,8 +553,11 @@ footer p {
 @media (max-width: 800px) {
   nav { padding: 1rem 1.5rem; }
   .nav-links { display: none; }
+  .nav-actions { gap: 0.6rem; }
   .nav-hamburger { display: flex; }
-  .hero { padding: 7rem 1.5rem 4rem; }
+  .hero { grid-template-columns: 1fr; gap: 2rem; align-items: flex-start; padding: 7rem 1.5rem 4rem; max-width: 620px; }
+  .hero-photo { order: -1; justify-self: start; width: min(54vw, 220px); margin-top: 0.5rem; }
+  .hero-scroll { left: 1.5rem; bottom: 1.5rem; }
   .section { padding: 4rem 1.5rem; }
   .about-grid { grid-template-columns: 1fr; gap: 2.5rem; }
   .project-inner { grid-template-columns: 1fr; gap: 2rem; }
@@ -467,9 +579,19 @@ footer p {
     <li><a href="#certifications">Certifications</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
-  <button class="nav-hamburger" id="hamburger" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
+  <div class="nav-actions">
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light mode" aria-pressed="false">
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>
+      </svg>
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3a6.8 6.8 0 0 0 8.9 8.9A8.5 8.5 0 1 1 12 3z"></path>
+      </svg>
+    </button>
+    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
 <!-- MOBILE MENU -->
@@ -484,9 +606,15 @@ footer p {
 <!-- HERO -->
 <div style="max-width:900px;margin:0 auto;">
 <section class="hero">
-  <h1 class="hero-name">Jil Dominic<br/><em>Pojarda</em></h1>
-  <p class="hero-subtitle">BS Computer Science · Ateneo de Naga University · Designer · Developer</p>
-  <a href="#projects" class="hero-cta">View my work ↓</a>
+  <div class="hero-copy">
+    <h1 class="hero-name">Jil Dominic<br/><em>Pojarda</em></h1>
+    <p class="hero-subtitle">BS Computer Science · Ateneo de Naga University · Designer · Developer</p>
+    <a href="#projects" class="hero-cta">View my work ↓</a>
+  </div>
+  <figure class="hero-photo" aria-label="Portrait of Jil Dominic Pojarda">
+    <div class="hero-photo-fallback" aria-hidden="true">JP</div>
+    <img src="profile-photo.jpg" alt="Portrait of Jil Dominic Pojarda" loading="eager" onerror="this.classList.add('is-hidden');"/>
+  </figure>
   <div class="hero-scroll">scroll</div>
 </section>
 </div>
@@ -802,6 +930,35 @@ footer p {
 </footer>
 
 <script>
+const root = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  root.classList.toggle('light-mode', isLight);
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+    themeToggle.setAttribute('aria-pressed', String(isLight));
+  }
+  if (themeMeta) {
+    themeMeta.setAttribute('content', isLight ? '#f6f7f4' : '#0d0f12');
+  }
+}
+
+function saveTheme(theme) {
+  try { localStorage.setItem('portfolio-theme', theme); } catch (error) {}
+}
+
+applyTheme(root.classList.contains('light-mode') ? 'light' : 'dark');
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = root.classList.contains('light-mode') ? 'dark' : 'light';
+    saveTheme(nextTheme);
+    applyTheme(nextTheme);
+  });
+}
 function swapImg(id, src) {
   document.getElementById(id).src = src;
 }
