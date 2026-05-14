@@ -398,35 +398,89 @@ nav {
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
-/* Enhanced heights for better visual impact */
-.img-main-wrap img {
+
+/* Standard images (non-mobile mockups) */
+.img-main-wrap:not(.mobile-mockup) img {
   width: 100%; height: 280px;
   display: block;
   background: var(--card);
   transition: transform 0.3s ease;
 }
-.img-main-wrap:hover img {
+.img-main-wrap:not(.mobile-mockup):hover img {
   transform: scale(1.02);
 }
+
 /* Wider images (landscape screenshots) */
-.img-main-wrap.landscape img {
+.img-main-wrap.landscape:not(.mobile-mockup) img {
   object-fit: cover; height: 240px;
 }
-/* Tall/portrait images (mobile mockups) - use cover to eliminate side spacing */
-.img-main-wrap.portrait img {
-  object-fit: cover; height: 380px;
+
+/* Mobile mockups - special handling to show full device frame with padding */
+.img-main-wrap.mobile-mockup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--surface);
 }
-.thumb-wrap.portrait img {
-  object-fit: cover; height: 120px;
-}
-/* Terminal / small images */
-.img-main-wrap.terminal img {
-  object-fit: contain; height: 220px; padding: 0.75rem;
+.img-main-wrap.mobile-mockup img {
+  max-width: 100%;
+  max-height: 400px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 1rem;
 }
 
-/* Portrait thumbnails - use cover to eliminate side spacing */
-.thumb-wrap.portrait img {
-  object-fit: cover; height: 120px;
+/* Tall/portrait images (other than mobile mockups) */
+.img-main-wrap.portrait:not(.mobile-mockup) img {
+  object-fit: contain; height: 380px;
+}
+
+/* Thumbnail handling */
+.thumb-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+  cursor: pointer; transition: all 0.3s ease;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.thumb-wrap:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+.thumb-wrap:active {
+  transform: translateY(0);
+}
+.thumb-wrap img {
+  width: 100%; height: 100px;
+  object-fit: contain; display: block;
+  background: var(--card);
+  transition: transform 0.3s ease;
+}
+.thumb-wrap:hover img {
+  transform: scale(1.05);
+}
+.thumb-wrap.landscape img { object-fit: cover; }
+.thumb-wrap.portrait img  { object-fit: contain; height: 120px; }
+
+/* Mobile mockup thumbnails */
+.thumb-wrap.mobile-mockup {
+  padding: 0.5rem;
+  background: var(--surface);
+}
+.thumb-wrap.mobile-mockup img {
+  max-width: 100%;
+  max-height: 120px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: var(--card);
 }
 
 .img-thumbs {
@@ -1223,10 +1277,10 @@ footer p {
             <div class="thumb-wrap" onclick="swapImg('sk-main','assets/projects/skwater-gameplay.webp')">
               <img src="assets/projects/skwater-gameplay.webp" alt="Skwater gameplay" width="800" height="400" loading="lazy" decoding="async">
             </div>
-            <div class="thumb-wrap" onclick="swapImg('sk-main','assets/projects/skwater-sprites.webp')">
+            <div class="thumb-wrap mobile-mockup" onclick="swapImg('sk-main','assets/projects/skwater-sprites.webp')">
               <img src="assets/projects/skwater-sprites.webp" alt="Skwater sprites" width="580" height="360" loading="lazy" decoding="async">
             </div>
-            <div class="thumb-wrap" onclick="swapImg('sk-main','assets/projects/skwater-store.webp')">
+            <div class="thumb-wrap mobile-mockup" onclick="swapImg('sk-main','assets/projects/skwater-store.webp')">
               <img src="assets/projects/skwater-store.webp" alt="Skwater store" width="580" height="360" loading="lazy" decoding="async">
             </div>
           </div>
@@ -1273,14 +1327,14 @@ footer p {
     <div class="project-item" data-observe>
       <div class="project-inner">
         <div class="project-imgs">
-          <div class="img-main-wrap portrait">
+          <div class="img-main-wrap portrait mobile-mockup">
             <img id="md-main" src="assets/projects/moodify-splash-main.webp" alt="Moodify splash screen" width="400" height="700" loading="lazy" decoding="async">
           </div>
           <div class="img-thumbs two">
-            <div class="thumb-wrap portrait" onclick="swapImg('md-main','assets/projects/moodify-splash.webp')">
+            <div class="thumb-wrap portrait mobile-mockup" onclick="swapImg('md-main','assets/projects/moodify-splash.webp')">
               <img src="assets/projects/moodify-splash.webp" alt="Moodify splash" width="400" height="700" loading="lazy" decoding="async">
             </div>
-            <div class="thumb-wrap portrait" onclick="swapImg('md-main','assets/projects/moodify-dashboard.webp')">
+            <div class="thumb-wrap portrait mobile-mockup" onclick="swapImg('md-main','assets/projects/moodify-dashboard.webp')">
               <img src="assets/projects/moodify-dashboard.webp" alt="Moodify dashboard" width="400" height="700" loading="lazy" decoding="async">
             </div>
           </div>
