@@ -7,6 +7,11 @@ const MAX_THREADS = 60;
 const THREAD_LIST_KEY = 'jil-portfolio-chat:threads';
 const THREAD_KEY_PREFIX = 'jil-portfolio-chat:thread:';
 
+// Rate limiting: max 5 messages per IP per 60 seconds
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_KEY_PREFIX = 'jil-portfolio-chat:ratelimit:';
+
 function sendJson(res, statusCode, body) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
@@ -97,6 +102,40 @@ async function kvSetJson(key, value) {
   await kvCommand('SET', key, JSON.stringify(value));
 }
 
+// Rate limiting using KV INCR + EXPIRE.
+// Returns { limited: true } if the IP has exceeded the limit,
+// or { limited: false } if the request is allowed.
+async function checkRateLimit(ip) {
+  if (!ip) return { limited: false }; // Can't identify IP, allow through
+
+  const key = `${RATE_LIMIT_KEY_PREFIX}${ip}`;
+
+  // INCR atomically increments the counter (creates it at 1 if it doesn't exist)
+  const count = await kvCommand('INCR', key);
+
+  // On the first request, set the expiry window
+  if (count === 1) {
+    await kvCommand('EXPIRE', key, RATE_LIMIT_WINDOW_SECONDS);
+  }
+
+  if (count > RATE_LIMIT_MAX) {
+    return { limited: true };
+  }
+
+  return { limited: false };
+}
+
+// Extracts the real client IP from Vercel's request headers.
+// Vercel sets x-forwarded-for; fall back to the socket address.
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    // x-forwarded-for can be a comma-separated list; the first is the client
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || null;
+}
+
 async function getThread(threadId) {
   if (!threadId) return null;
   return kvGetJson(`${THREAD_KEY_PREFIX}${threadId}`, null);
@@ -161,7 +200,16 @@ function verifyOwner(body, req) {
   return { ok: true };
 }
 
-async function handleVisitorMessage(body, res) {
+async function handleVisitorMessage(body, req, res) {
+  // Check rate limit before doing anything else
+  const ip = getClientIp(req);
+  const rateLimit = await checkRateLimit(ip);
+  if (rateLimit.limited) {
+    return sendJson(res, 429, {
+      error: `Too many messages. Please wait a moment before sending again.`
+    });
+  }
+
   const textResult = validateText(body.text, 'Message', MAX_TEXT_LENGTH);
   if (textResult.error) return sendJson(res, 400, { error: textResult.error });
 
@@ -248,7 +296,7 @@ module.exports = async function handler(req, res) {
     const body = getBody(req);
     const action = cleanString(body.action || 'visitor-message');
 
-    if (action === 'visitor-message') return handleVisitorMessage(body, res);
+    if (action === 'visitor-message') return handleVisitorMessage(body, req, res);
     if (action === 'owner-login') {
       const owner = verifyOwner(body, req);
       return sendJson(res, owner.error ? owner.statusCode || 500 : 200, owner.error ? { error: owner.error } : { ok: true });
