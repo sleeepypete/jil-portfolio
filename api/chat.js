@@ -7,10 +7,13 @@ const MAX_THREADS = 60;
 const THREAD_LIST_KEY = 'jil-portfolio-chat:threads';
 const THREAD_KEY_PREFIX = 'jil-portfolio-chat:thread:';
 
-// Rate limiting: max 5 messages per IP per 60 seconds
-const RATE_LIMIT_MAX = 5;
+// Rate limiting for visitor writes: max 5 messages per IP per 60 seconds
+const WRITE_RATE_LIMIT_MAX = 5;
+// Rate limiting for reads: max 20 loads per IP per 60 seconds
+const READ_RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
-const RATE_LIMIT_KEY_PREFIX = 'jil-portfolio-chat:ratelimit:';
+const RATE_LIMIT_WRITE_PREFIX = 'jil-portfolio-chat:ratelimit:write:';
+const RATE_LIMIT_READ_PREFIX = 'jil-portfolio-chat:ratelimit:read:';
 
 function sendJson(res, statusCode, body) {
   res.statusCode = statusCode;
@@ -59,6 +62,20 @@ function publicThreadSummary(summary) {
   return publicSummary;
 }
 
+// Rejects requests from origins that don't match the host.
+// Protects against other websites calling your API from their frontend.
+function checkOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true; // Same-origin requests don't send an Origin header
+  const host = req.headers.host;
+  try {
+    const originHost = new URL(origin).host;
+    return originHost === host;
+  } catch {
+    return false;
+  }
+}
+
 function storageConfig() {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
@@ -102,38 +119,28 @@ async function kvSetJson(key, value) {
   await kvCommand('SET', key, JSON.stringify(value));
 }
 
+// Extracts the real client IP from Vercel's request headers.
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || null;
+}
+
 // Rate limiting using KV INCR + EXPIRE.
-// Returns { limited: true } if the IP has exceeded the limit,
-// or { limited: false } if the request is allowed.
-async function checkRateLimit(ip) {
-  if (!ip) return { limited: false }; // Can't identify IP, allow through
+// keyPrefix distinguishes read vs write counters per IP.
+async function checkRateLimit(ip, keyPrefix, max) {
+  if (!ip) return { limited: false };
 
-  const key = `${RATE_LIMIT_KEY_PREFIX}${ip}`;
-
-  // INCR atomically increments the counter (creates it at 1 if it doesn't exist)
+  const key = `${keyPrefix}${ip}`;
   const count = await kvCommand('INCR', key);
 
-  // On the first request, set the expiry window
   if (count === 1) {
     await kvCommand('EXPIRE', key, RATE_LIMIT_WINDOW_SECONDS);
   }
 
-  if (count > RATE_LIMIT_MAX) {
-    return { limited: true };
-  }
-
-  return { limited: false };
-}
-
-// Extracts the real client IP from Vercel's request headers.
-// Vercel sets x-forwarded-for; fall back to the socket address.
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    // x-forwarded-for can be a comma-separated list; the first is the client
-    return forwarded.split(',')[0].trim();
-  }
-  return req.socket?.remoteAddress || null;
+  return { limited: count > max };
 }
 
 async function getThread(threadId) {
@@ -201,13 +208,10 @@ function verifyOwner(body, req) {
 }
 
 async function handleVisitorMessage(body, req, res) {
-  // Check rate limit before doing anything else
   const ip = getClientIp(req);
-  const rateLimit = await checkRateLimit(ip);
+  const rateLimit = await checkRateLimit(ip, RATE_LIMIT_WRITE_PREFIX, WRITE_RATE_LIMIT_MAX);
   if (rateLimit.limited) {
-    return sendJson(res, 429, {
-      error: `Too many messages. Please wait a moment before sending again.`
-    });
+    return sendJson(res, 429, { error: 'Too many messages. Please wait a moment before sending again.' });
   }
 
   const textResult = validateText(body.text, 'Message', MAX_TEXT_LENGTH);
@@ -278,7 +282,18 @@ async function handleOwnerReply(body, req, res) {
 
 module.exports = async function handler(req, res) {
   try {
+    // Block requests from foreign origins (e.g. other sites calling your API)
+    if (!checkOrigin(req)) {
+      return sendJson(res, 403, { error: 'Forbidden' });
+    }
+
     if (req.method === 'GET') {
+      const ip = getClientIp(req);
+      const rateLimit = await checkRateLimit(ip, RATE_LIMIT_READ_PREFIX, READ_RATE_LIMIT_MAX);
+      if (rateLimit.limited) {
+        return sendJson(res, 429, { error: 'Too many requests. Please slow down.' });
+      }
+
       const query = readQuery(req);
       const threadId = query.get('threadId');
       const thread = await getThread(cleanString(threadId));

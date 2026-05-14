@@ -1568,6 +1568,13 @@ function setChatUnread(hasUnread) {
   chatUnread.hidden = !hasUnread;
 }
 
+function getSessionValue(key) {
+try { return sessionStorage.getItem(key) || ''; } catch (error) { return ''; }
+}
+function setSessionValue(key, value) {
+try { sessionStorage.setItem(key, value); } catch (error) {}
+}
+
 function latestOwnerMessageId(messages) {
   const ownerMessages = (messages || []).filter((message) => message.author === 'owner');
   return ownerMessages.length ? ownerMessages[ownerMessages.length - 1].id : '';
@@ -1742,7 +1749,7 @@ if (visitorChatForm) {
 }
 
 function setupOwnerMode() {
-  ownerKey = getStoredValue(CHAT_OWNER_KEY);
+  ownerKey = getSessionValue(CHAT_OWNER_KEY);
   if (ownerKey) {
     unlockOwnerDashboard();
     loadOwnerThreads(true);
@@ -1829,7 +1836,7 @@ if (ownerLoginForm) {
 
     try {
       await requestChat({ action: 'owner-login', ownerKey });
-      setStoredValue(CHAT_OWNER_KEY, ownerKey);
+      setSessionValue(CHAT_OWNER_KEY, ownerKey);
       unlockOwnerDashboard();
       setChatStatus(ownerChatStatus, '', '');
       await loadOwnerThreads(true);
