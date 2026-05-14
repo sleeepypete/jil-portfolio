@@ -354,6 +354,10 @@ nav {
   padding: 3rem 0;
   opacity: 0; transform: translateY(28px);
   transition: opacity 0.6s ease, transform 0.6s ease;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 .project-item:last-child { border-bottom: 1px solid var(--border); }
 .project-item.visible { opacity: 1; transform: translateY(0); }
@@ -362,39 +366,61 @@ nav {
   display: grid;
   grid-template-columns: 1fr 1.1fr;
   gap: 3.5rem; align-items: start;
+  padding: 1.5rem;
+  background: var(--card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 .project-inner.flip { direction: rtl; }
 .project-inner.flip > * { direction: ltr; }
+.project-item:hover .project-inner {
+  border-color: var(--border-h);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
 
-/* IMAGE AREA — key fix: contain images properly */
+/* IMAGE AREA — enhanced design */
 .project-imgs { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .img-main-wrap {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 6px; overflow: hidden;
+  border-radius: 8px;
+  overflow: hidden;
   display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-/* Fixed height so images don't distort or over-zoom */
+.img-main-wrap:hover {
+  border-color: var(--border-h);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+/* Enhanced heights for better visual impact */
 .img-main-wrap img {
-  width: 100%; height: 260px;
+  width: 100%; height: 280px;
   object-fit: contain;
   display: block;
   background: var(--card);
+  transition: transform 0.3s ease;
 }
-/* Wider images (landscape screenshots) fill naturally */
+.img-main-wrap:hover img {
+  transform: scale(1.02);
+}
+/* Wider images (landscape screenshots) */
 .img-main-wrap.landscape img {
-  object-fit: cover; height: 220px;
+  object-fit: cover; height: 240px;
 }
 /* Tall/portrait images (mobile mockups) */
 .img-main-wrap.portrait img {
-  object-fit: contain; height: 360px;
+  object-fit: contain; height: 380px;
 }
 .thumb-wrap.portrait img { object-fit: contain; height: 120px; }
 /* Terminal / small images */
 .img-main-wrap.terminal img {
-  object-fit: contain; height: 200px; padding: 0.5rem;
+  object-fit: contain; height: 220px; padding: 0.75rem;
 }
 
 .img-thumbs {
@@ -405,18 +431,30 @@ nav {
 
 .thumb-wrap {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 4px; overflow: hidden;
-  cursor: pointer; transition: border-color 0.2s;
+  border-radius: 6px; overflow: hidden;
+  cursor: pointer; transition: all 0.3s ease;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.thumb-wrap:hover { border-color: var(--accent); }
+.thumb-wrap:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+.thumb-wrap:active {
+  transform: translateY(0);
+}
 .thumb-wrap img {
-  width: 100%; height: 90px;
+  width: 100%; height: 100px;
   object-fit: contain; display: block;
   background: var(--card);
+  transition: transform 0.3s ease;
+}
+.thumb-wrap:hover img {
+  transform: scale(1.05);
 }
 .thumb-wrap.landscape img { object-fit: cover; }
-.thumb-wrap.portrait img  { object-fit: contain; height: 110px; }
+.thumb-wrap.portrait img  { object-fit: contain; height: 120px; }
 
 /* PROJECT INFO */
 .project-info { padding-top: 0.3rem; }
