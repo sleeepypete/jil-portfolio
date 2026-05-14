@@ -323,6 +323,6 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 400, { error: 'Unknown chat action' });
   } catch (error) {
     console.error('Chat API error:', error);
-    return sendJson(res, 500, { error: error.message || 'Chat is unavailable' });
+    return sendJson(res, 500, { error: 'Chat is unavailable' });
   }
 };
